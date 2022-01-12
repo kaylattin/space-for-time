@@ -8,7 +8,7 @@ library(bayesplot)
 rm(list = ls())
 gc()
 
-d <- read.csv("~/manuscript/FinalDataset_RFsub.csv")
+d <- read.csv("~/manuscript/FinalDataset_TOsub.csv")
 
 
 # Initial data plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,7 +42,7 @@ d_slim <- list(
   stops = d$NumForestStops,
   
   # ta = d$TA, # turn on if running abundance model
-  richness = d$Richness, # turn on if running richness model
+  ta = d$TA, # turn on if running richness model
   spacetime = d$space.time,
   space = d$space,
   time = d$time,
@@ -57,7 +57,7 @@ d_slim <- list(
 
 # Compile the model in cmdstan  ~~~~~~~~~~~~~~~~~~~
 # file <- file.path ("AbundanceRegression.stan") # turn on if running abundance model
-file <- file.path("~/space-for-time/Rstan models/RichnessRegressionPoisson.stan") # turn on if running richness model
+file <- file.path("~/space-for-time/Rstan models/AbundanceRegressionPoisson.stan") # turn on if running richness model
 mod <- cmdstan_model(file, pedantic = TRUE)
 check_cmdstan_toolchain(fix = TRUE)
 
@@ -78,7 +78,7 @@ fit <- mod$sample(
 
 # create a stanfit S4 object 
 stanfit <- rstan::read_stan_csv(fit$output_files())
-save(stanfit, file =  "Output_RFsub_Poisson.RData")
+save(stanfit, file =  "Output_TOsub_Poisson.RData")
 
 y <- d$Richness
 

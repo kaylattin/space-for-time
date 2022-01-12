@@ -120,15 +120,16 @@ write.csv(df, "d_long_forest.csv")
 #   SPECIES RESPONSES        | 
 # --------------------------#
 # Repeat the following code a total of 4 times: 1) forest bird richness, 2) open bird richness; 3) forest bird abundance, 4) open bird abundance
+df <- read.csv("~/manuscript/Derived data products/d_long_open.csv")
 
 # Sum across the x stops that are forested >60% within 100m 
-stopFO <- read.csv("stopsInForest.csv")   ## if doing forest birds at forest stops
-# stopFO<- read.csv("stopsInOpen.csv")   ## if doing open birds at open stops
+# stopFO <- read.csv("stopsInForest.csv")   ## if doing forest birds at forest stops
+stopFO<- read.csv("~/manuscript/Derived data products/stopsInOpen.csv")   ## if doing open birds at open stops
 
 # Quick dataset clean-up of .csv file, obtained in code 02
-stopFO$rte = gsub('0+$', '', Stops$rte)
-stopFO$RouteNumber <- sub("\\.[0-9]+$", "", Stops$rte)
-stopFO$Stop <- sub(".*\\.", "", Stops$rte)
+stopFO$rte = gsub('0+$', '', stopFO$rte)
+stopFO$RouteNumber <- sub("\\.[0-9]+$", "", stopFO$rte)
+stopFO$Stop <- sub(".*\\.", "", stopFO$rte)
 
 # Because of renaming of duplicate species (as subspecies or hybrids) above, counts for the same species can appear twice but not in the same record
 # e.g., Northern Flicker, Yellow-Rumped Warbler, and Dark-eyed Junco might have more than 1 record per stop
@@ -290,7 +291,7 @@ summarize_df <- summarize_df %>% filter(!NumStops == 0)
 summarize_df <- summarize_df %>% group_by(Transect, RouteNumber, Year, CountryNum, NumStops) %>% summarize(TA = sum(TA))
 
 # Write to csv to save progress
-write.csv(summarize_df, "summarize_df_TF.csv")
+write.csv(summarize_df, "~/manuscript/derived data products/summarize_df_TO.csv")
 
 
 # -----------------------------------------------------------------------------------------------------------

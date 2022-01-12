@@ -8,15 +8,13 @@ library(sp)
 library(raster)
 
 # Load data in
-setwd("C:/Users/kayla/Documents/arcmap")
-d <- st_read("buffer_dataset_1km.shp") # dataset where bbs coords <= 1 km from line
-d <- as(d, "Spatial")
-setwd("C:/Users/kayla/Documents/arcmap/april 2021")
-dStops <- st_read("stops_buffer_100m.shp") # dataset of stops buffered by 100m
-dStp[s] <- as(dStops, "Spatial")
+d <- readOGR("buffer_NA_dataset.shp") # dataset where bbs coords <= 1 km from line
+
+## OR, if doing stops:
+d <- readOGR("~/manuscript/Shapefiles/buffer_100m_dataset.shp") # dataset of stops buffered by 100m
 
 d_proj <- sp::spTransform(d, CRS("+proj=longlat +datum=WGS84 +no_defs"))
-d_proj <- d_proj[!duplicated(d_proj$rteno),]
+# d_proj <- d_proj[!duplicated(d_proj$rteno),] # do only if using routes, not stops
 
 
 setwd("D:/gfcanalysis_v3")
@@ -29,7 +27,7 @@ plot(d) # Plot to check
 # Download the files
 download_tiles(
   tiles,
-  output_folder = "",
+  output_folder = "D:/gfcanalysis_v3",
   images = c("treecover2000", "lossyear", "gain", "datamask"),
   dataset = "GFC-2019-v1.7"
 )
@@ -51,7 +49,7 @@ writeRaster(threshold_forest, filename = "gfc_analysis_threshold.tif", format = 
 
 
 # Load in the thresholded raseter stack as a RasterBrick (optional, if working in 2 parts)
-# threshold_forest <- brick("gfc_analysis_threshold.tif")
+threshold_forest <- brick("gfc_analysis_threshold.tif")
 
 # Assign layers of the brick to different R objects
 cover <- threshold_forest[[1]]
@@ -59,7 +57,6 @@ loss <- threshold_forest[[2]]
 gain <- threshold_forest[[3]]
 lossgain <- threshold_forest[[4]]
 
-setwd("D:/forestlayers_check")
 # Save objects as separate Rasters
 writeRaster(cover, "threshold_cover2000.tif", format = "GTiff", options="COMPRESS=LZ77")
 writeRaster(loss, "threshold_loss.tif", format = "GTiff", options="COMPRESS=LZ77")
@@ -70,15 +67,15 @@ writeRaster(gain, "threshold_gain.tif", format = "GTiff", options="COMPRESS=LZ77
 
 # Extract pixel counts of cover2000
 exCover <- raster::extract(cover, d_proj, method = "simple")
-save(exCover, file = "extract_cover.RData")
+# save(exCover, file = "extract_cover.RData")
 
 # Extract pixel counts of loss
 exLoss <- raster::extract(loss, d_proj, method = "simple")
-save(exLoss, file = "extract_loss.RData")
+# save(exLoss, file = "extract_loss.RData")
 
 # Extract pixel counts of gain 
 exGain <- raster::extract(gain, d_proj, method = "simple")
-save(exGain, file = "extract_gain.RData")
+# save(exGain, file = "extract_gain.RData")
 
 # Ceate a list of frequency tables for each route
 coverTab <- lapply(exCover, table)
