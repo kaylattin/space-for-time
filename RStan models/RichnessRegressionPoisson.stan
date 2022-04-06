@@ -39,6 +39,7 @@ parameters {
   
   vector[nobs] observer;
   real<lower=0> sdobs;
+  real<lower=0> sdfirst;
   
   vector[nfirstobs] first;
   
@@ -57,7 +58,7 @@ transformed parameters{
   for(i in 1:ncounts){
   real noise = sdnoise*noise_raw[i];
   
-  lambda[i] = a[reg[i], spacetime[i]] + b_time[reg[i]] * time[i] * pforest[i] + log(stops[i]) + b_space[reg[i]] * space[i] * pforest[i] + observer[obs[i]] + first[firstobs[i]] + noise;
+  lambda[i] = a[reg[i], spacetime[i]] + b_time[reg[i]] * time[i] * pforest[i] + b_space[reg[i]] * space[i] * pforest[i] + log(stops[i]) + observer[obs[i]] + first[firstobs[i]] + noise;
   
   }
   
@@ -78,8 +79,9 @@ model {
  b_time ~ normal(0, 1);
 
  observer ~ normal(0, sdobs);
+ first ~ normal(0, sdfirst);
  sdobs ~ normal(0, 1);
- first ~ normal(0, 1);
+ sdfirst ~ normal(0, 1);
  
  sdnoise ~ normal(0,1);
  noise_raw ~ normal(0, 1);
@@ -92,15 +94,15 @@ richness ~ poisson_log(lambda);
 
 generated quantities{
     int y_rep[ncounts];
-  vector[ncounts] log_lik;
+  //vector[ncounts] log_lik;
   vector[nreg]  b_dif_rg;
-  real<lower=0> retrans_noise;
-  real<lower=0> retrans_obs;
+  //real<lower=0> retrans_noise;
+  //real<lower=0> retrans_obs;
   matrix[nreg, ncounts] y_space;
   matrix[nreg, ncounts] y_time;
   
-  retrans_noise = 0.5*(sdnoise^2);
-  retrans_obs = 0.5*(sdobs^2);
+  //retrans_noise = 0.5*(sdnoise^2);
+  //retrans_obs = 0.5*(sdobs^2);
 
 
      for(g in 1:nreg){
@@ -114,11 +116,11 @@ generated quantities{
     
     for(n in 1:nreg){
       
-      y_space[n,i] = poisson_log_rng(a[n, 1] + b_time[n] * 0 * xseq[i] + b_space[n] * 1 * xseq[i] + new_noise);
+      y_space[n,i] = poisson_log_rng(a[n, 2] + b_time[n] * 0 * xseq[i] + b_space[n] * 1 * xseq[i] + new_noise);
         
 
       
-      y_time[n,i] = poisson_log_rng(a[n, 2] + b_time[n] * 1 * xseq[i] + b_space[n] * 0 * xseq[i] + new_noise);
+      y_time[n,i] = poisson_log_rng(a[n, 1] + b_time[n] * 1 * xseq[i] + b_space[n] * 0 * xseq[i] + new_noise);
 
   }
   }
