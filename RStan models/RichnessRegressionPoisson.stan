@@ -11,6 +11,7 @@ data {
   int<lower=1> nst;
   int<lower=1> nfirstobs;
   int<lower=1> nstops;
+  int<lower=1> ndata;
 
   int<lower=1> spacetime[ncounts];
   int<lower=0> richness[ncounts];   // Species richness as a count/integer
@@ -22,6 +23,7 @@ data {
   int<lower=1> obs[ncounts];   // observers
   int<lower=1> firstobs[ncounts];
   real pforest[ncounts];  // Percent forest cover
+  real xseq[ndata];
   
 
 }
@@ -42,6 +44,7 @@ parameters {
   
   real<lower=0> sdnoise;
   vector[ncounts] noise_raw;
+  vector[30] new_noise_raw;
   
 
 }
@@ -80,6 +83,7 @@ model {
  
  sdnoise ~ normal(0,1);
  noise_raw ~ normal(0, 1);
+ new_noise_raw ~ normal(0, 1);
 
 
 richness ~ poisson_log(lambda);         
@@ -87,12 +91,13 @@ richness ~ poisson_log(lambda);
 }
 
 generated quantities{
-  int y_rep[ncounts];
+    int y_rep[ncounts];
   vector[ncounts] log_lik;
   vector[nreg]  b_dif_rg;
   real<lower=0> retrans_noise;
   real<lower=0> retrans_obs;
-
+  matrix[nreg, ncounts] y_space;
+  matrix[nreg, ncounts] y_time;
   
   retrans_noise = 0.5*(sdnoise^2);
   retrans_obs = 0.5*(sdobs^2);
@@ -101,12 +106,25 @@ generated quantities{
      for(g in 1:nreg){
          b_dif_rg[g] = b_time[g]-b_space[g];
      }
+     
+    // Y_rep for prior predictive check
+  for(i in 1:30){
   
+    real new_noise = sdnoise*new_noise_raw[i];
+    
+    for(n in 1:nreg){
+      
+      y_space[n,i] = poisson_log_rng(a[n, 1] + b_time[n] * 0 * xseq[i] + b_space[n] * 1 * xseq[i] + new_noise);
+        
 
+      
+      y_time[n,i] = poisson_log_rng(a[n, 2] + b_time[n] * 1 * xseq[i] + b_space[n] * 0 * xseq[i] + new_noise);
 
+  }
+  }
   // Y_rep for prior predictive check
-  for(i in 1:ncounts){
-  y_rep[i] = poisson_log_rng(lambda[i]);
+  for(k in 1:ncounts){
+  y_rep[k] = poisson_log_rng(lambda[k]);
   }
   
   
