@@ -23,7 +23,7 @@ data {
   int<lower=1> obs[ncounts];   // observers
   int<lower=1> firstobs[ncounts];
   real pforest[ncounts];  // Percent forest cover
-  int xseq[ndata];
+  real xseq[ndata];
   
 
 }
@@ -37,13 +37,16 @@ parameters {
   vector[nreg] b_space;
   vector[nreg] b_time;
   
-  vector[nobs] observer;
+  vector[nobs] observer_raw;
+  vector[nfirstobs] first_raw;
   real<lower=0> sdobs;
+  real<lower=0> sdfirst;
   
-  vector[nfirstobs] first;
+
   
   real<lower=0> sdnoise;
   vector[ncounts] noise_raw;
+  vector[30] new_noise_raw;
   
 
 }
@@ -51,6 +54,11 @@ parameters {
 transformed parameters{
   
  vector[ncounts] lambda;
+ vector[nobs] observer;
+ vector[nfirstobs] first;
+
+  observer = sdobs * observer_raw; 
+  first = sdobs * first_raw;
 
 
   for(i in 1:ncounts){
@@ -71,18 +79,20 @@ model {
  
 // MAIN MODEL
 
- to_vector(a) ~ normal(0, 1);
+ to_vector(a) ~ std_normal();
 
- b_space ~ normal(0, 1);
- b_time ~ normal(0, 1);
+ b_space ~ std_normal();
+ b_time ~ std_normal();
 
- observer ~ normal(0, sdobs);
- sdobs ~ normal(0, 1);
- first ~ normal(0, 1);
+ observer_raw ~ std_normal();
+ first_raw ~ std_normal();
  
- sdnoise ~ normal(0,1);
- noise_raw ~ normal(0, 1);
-
+ sdobs ~ std_normal();
+ sdfirst ~ std_normal();
+ 
+ sdnoise ~ std_normal();
+ noise_raw ~ std_normal();
+ new_noise_raw ~ std_normal();
 
 ta ~ poisson_log(lambda);         
    
@@ -90,12 +100,9 @@ ta ~ poisson_log(lambda);
 
 generated quantities{
   int y_rep[ncounts];
-  vector[ncounts] log_lik;
   vector[nreg]  b_dif_rg;
   real<lower=0> retrans_noise;
   real<lower=0> retrans_obs;
-  matrix[nreg, ncounts] y_space;
-  matrix[nreg, ncounts] y_time;
 
   retrans_noise = 0.5*(sdnoise^2);
   retrans_obs = 0.5*(sdobs^2);
@@ -106,37 +113,10 @@ generated quantities{
      }
   
   
-
-  // Y_rep for prior predictive check
-  for(i in 1:ncounts){
-    
-    real noise = sdnoise*noise_raw[i];
-    
-    for(n in 1:nreg){
-      
-    if (space[i] == 1) {
-        
-      y_space[n,i] = poisson_log_rng(a[n, spacetime[i]] + b_time[n] * time[i] * pforest[i] + log(stops[i]) + b_space[n] * space[i] * pforest[i] + observer[obs[i]] + first[firstobs[i]] + noise);
-        
-      }
-    else if (time[i] == 1) {
-      
-       y_time[n,i] = poisson_log_rng(a[n, spacetime[i]] + b_time[n] * time[i] * pforest[i] + log(stops[i]) + b_space[n] * space[i] * pforest[i] + observer[obs[i]] + first[firstobs[i]] + noise);
-    }
-    }
-  }
-  
     // Y_rep for prior predictive check
   for(i in 1:ncounts){
   y_rep[i] = poisson_log_rng(lambda[i]);
   }
-  
-  // for(n in 1:ncounts){
-    // log_lik[n] = poisson_lcdf(ta[n] | a[reg[n], spacetime[n]]  b_time[reg[n]] * time[n] * pforest[n] +  b_space[reg[n]] * space[n] * pforest[n] + observer[obs[n]] + log(stops[n]) + first[firstobs[n]] + sdnoise[n]);
-    
-  // }
-  
-  
-  
+
   
 }

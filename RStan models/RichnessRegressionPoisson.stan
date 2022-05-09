@@ -37,11 +37,12 @@ parameters {
   vector[nreg] b_space;
   vector[nreg] b_time;
   
-  vector[nobs] observer;
+  vector[nobs] observer_raw;
+  vector[nfirstobs] first_raw;
   real<lower=0> sdobs;
   real<lower=0> sdfirst;
   
-  vector[nfirstobs] first;
+
   
   real<lower=0> sdnoise;
   vector[ncounts] noise_raw;
@@ -53,9 +54,14 @@ parameters {
 transformed parameters{
   
  vector[ncounts] lambda;
+ vector[nobs] observer;
+ vector[nfirstobs] first;
 
+  observer = sdobs * observer_raw; 
+  first = sdobs * first_raw;
 
   for(i in 1:ncounts){
+
   real noise = sdnoise*noise_raw[i];
   
   lambda[i] = a[reg[i], spacetime[i]] + b_time[reg[i]] * time[i] * pforest[i] + b_space[reg[i]] * space[i] * pforest[i] + log(stops[i]) + observer[obs[i]] + first[firstobs[i]] + noise;
@@ -73,19 +79,20 @@ model {
  
 // MAIN MODEL
 
- to_vector(a) ~ normal(0, 1);
+ to_vector(a) ~ std_normal();
 
- b_space ~ normal(0, 1);
- b_time ~ normal(0, 1);
+ b_space ~ std_normal();
+ b_time ~ std_normal();
 
- observer ~ normal(0, sdobs);
- first ~ normal(0, sdfirst);
- sdobs ~ normal(0, 1);
- sdfirst ~ normal(0, 1);
+ observer_raw ~ std_normal();
+ first_raw ~ std_normal();
  
- sdnoise ~ normal(0,1);
- noise_raw ~ normal(0, 1);
- new_noise_raw ~ normal(0, 1);
+ sdobs ~ std_normal();
+ sdfirst ~ std_normal();
+ 
+ sdnoise ~ std_normal();
+ noise_raw ~ std_normal();
+ new_noise_raw ~ std_normal();
 
 
 richness ~ poisson_log(lambda);         
@@ -96,34 +103,17 @@ generated quantities{
     int y_rep[ncounts];
   //vector[ncounts] log_lik;
   vector[nreg]  b_dif_rg;
-  //real<lower=0> retrans_noise;
-  //real<lower=0> retrans_obs;
-  matrix[nreg, ncounts] y_space;
-  matrix[nreg, ncounts] y_time;
+  real<lower=0> retrans_noise;
+  real<lower=0> retrans_obs;
   
-  //retrans_noise = 0.5*(sdnoise^2);
-  //retrans_obs = 0.5*(sdobs^2);
+  retrans_noise = 0.5*(sdnoise^2);
+  retrans_obs = 0.5*(sdobs^2);
 
 
      for(g in 1:nreg){
          b_dif_rg[g] = b_time[g]-b_space[g];
      }
      
-    // Y_rep for prior predictive check
-  for(i in 1:30){
-  
-    real new_noise = sdnoise*new_noise_raw[i];
-    
-    for(n in 1:nreg){
-      
-      y_space[n,i] = poisson_log_rng(a[n, 2] + b_time[n] * 0 * xseq[i] + b_space[n] * 1 * xseq[i] + new_noise);
-        
-
-      
-      y_time[n,i] = poisson_log_rng(a[n, 1] + b_time[n] * 1 * xseq[i] + b_space[n] * 0 * xseq[i] + new_noise);
-
-  }
-  }
   // Y_rep for prior predictive check
   for(k in 1:ncounts){
   y_rep[k] = poisson_log_rng(lambda[k]);

@@ -6,7 +6,7 @@ library(ggpubr)
 
 region <- vector()
 
-for( i in 1:31 ) {
+for( i in 1:30 ) {
   
   region[i] <- paste("Region", i, sep = " ")
   
@@ -15,7 +15,7 @@ region <- rev(region)
 
 
 
-load("Output_RF_Poisson.RData")
+load("Output_RF_Final.RData")
 b_dif_rg <- as.matrix(stanfit, pars = "b_dif_rg")
 
 col <- rep("#253494", 6)
@@ -32,7 +32,7 @@ p1
 
 
 
-load("Output_RO_Poisson.RData")
+load("Output_RO_Final.RData")
 
 b_dif_rg <- as.matrix(stanfit, pars = "b_dif_rg")
 
@@ -51,7 +51,7 @@ p2 <- p2 + vline_0(size = 0.25, color = "darkgray", linetype = 2) + yaxis_text(F
 
 
 
-load("Output_RFsub_Poisson.RData")
+load("Output_RFsub_Final.RData")
 b_dif_rg <- as.matrix(stanfit, pars = "b_dif_rg")
 
 
@@ -66,7 +66,7 @@ p3 <- p3 + vline_0(size = 0.25, color = "darkgray", linetype = 2) + yaxis_text(F
 
 
 
-load("Output_ROsub_Poisson.RData")
+load("Output_ROsub_Final.RData")
 
 b_dif_rg <- as.matrix(stanfit, pars = "b_dif_rg")
 
@@ -85,5 +85,5 @@ all <- ggarrange(p3, p1, p4, p2,
           ncol = 2, nrow = 2) 
 
 all
-ggsave(filename = "RichnessDifferences.png", device = "png", plot = all,
+ggsave(filename = "RichnessDifferences_Final2.png", device = "png", plot = all,
        width = 30, height = 30, units = "cm")
