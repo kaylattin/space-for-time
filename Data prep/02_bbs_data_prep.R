@@ -3,6 +3,8 @@ library(tidyverse)
 library(sp)
 library(sf)
 
+setwd("~/space-for-time/Derived data products")
+
 # Load in initial files
 Species <- read.csv("BBS_SpeciesList.csv")
 Species <- Species %>% select(AOU, English_Common_Name)
@@ -80,13 +82,13 @@ d$English_Common_Name<- gsub("Black Brant", "Brant", d$English_Common_Name)
 d <- d %>%  filter(!grepl('unid.|hybrid', English_Common_Name))
 
 # Move into long format
-d_long <- reshape(d, v.names = "Count", varying = 8:18, timevar = "Stop", times = names(dd)[8:18], direction='long')
+d_long <- reshape(d, v.names = "Count", varying = 8:18, timevar = "Stop", times = names(d)[8:18], direction='long')
 
 # Get rid of extra text string in the Stop field
 d_long$Stop <- str_remove(d_long$Stop, "Stop")
 
 
-write.csv(dd_long, "d_long.csv")
+write.csv(d_long, "d_long.csv")
 
 # -----------------------------------------------------------------------------------------------------------
 # ---------------------------#
@@ -107,12 +109,12 @@ forestcodes <- forestcodes %>% dplyr::select(English_Common_Name, new.status) %>
 df <- merge(d_long, forestcodes, by = "English_Common_Name")
 
 ## Select for either forest or open birds
-df <- df %>% filter(new.status == "F") ## if doing forest birds at forest stops
-#ddf <- ddf %>% filter(new.status == c("O")) ## if doing open birds at open stops
-
+#df <- df %>% filter(new.status == "F") ## if doing forest birds at forest stops
+df <- df %>% filter(new.status == c("O")) ## if doing open birds at open stops
 
 # Write to csv file to save progress
-write.csv(df, "d_long_forest.csv")
+write.csv(df, "d_long_open.csv")
+
 
 
 # -----------------------------------------------------------------------------------------------------------
@@ -120,16 +122,16 @@ write.csv(df, "d_long_forest.csv")
 #   SPECIES RESPONSES        | 
 # --------------------------#
 # Repeat the following code a total of 4 times: 1) forest bird richness, 2) open bird richness; 3) forest bird abundance, 4) open bird abundance
-df <- read.csv("~/manuscript/Derived data products/d_long_open.csv")
+df <- read.csv("d_long_forest.csv")
 
 # Sum across the x stops that are forested >60% within 100m 
 # stopFO <- read.csv("stopsInForest.csv")   ## if doing forest birds at forest stops
-stopFO<- read.csv("~/manuscript/Derived data products/stopsInOpen.csv")   ## if doing open birds at open stops
+stopFO<- read.csv("stopsInForest.csv")   ## if doing open birds at open stops
+names(stopFO)[names(stopFO) == 'rte'] <- 'RouteNumber'
 
-# Quick dataset clean-up of .csv file, obtained in code 02
-stopFO$rte = gsub('0+$', '', stopFO$rte)
-stopFO$RouteNumber <- sub("\\.[0-9]+$", "", stopFO$rte)
-stopFO$Stop <- sub(".*\\.", "", stopFO$rte)
+# stopFO$rte = gsub('0+$', '', stopFO$rte)
+# stopFO$RouteNumber <- sub("\\.[0-9]+$", "", stopFO$rte)
+#stopFO$Stop <- sub(".*\\.", "", stopFO$rte)
 
 # Because of renaming of duplicate species (as subspecies or hybrids) above, counts for the same species can appear twice but not in the same record
 # e.g., Northern Flicker, Yellow-Rumped Warbler, and Dark-eyed Junco might have more than 1 record per stop
@@ -137,9 +139,9 @@ stopFO$Stop <- sub(".*\\.", "", stopFO$rte)
 df <- df %>% group_by(Transect, RouteNumber, Year, CountryNum, English_Common_Name, Stop) %>% summarize(Count = sum(Count))
 
 # Get list of routes
-shp <- st_read("~/manuscript/Shapefiles/buffer_NA_dataset.shp")
+shp <- st_read("~/space-for-time/Shapefiles/buffer_NA_dataset.shp")
 shp <- as(shp, "Spatial")
-rteno <- shp@data$rteno
+rteno <- unique(shp@data$rteno)
 ddf <- vector("list") # Initialize list
 
 ### BEGINNING OF IF FUNCTION for **SPECIES RICHNESS** ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -288,11 +290,12 @@ summarize_df <- summarize_df %>% filter(!NumStops == 0)
 
 # Tabulate total responses across stops for each route 
 # summarize_df <- summarize_df %>% group_by(Transect, RouteNumber, Year, CountryNum, NumStops) %>% summarize(Richness = sum(Richness))
-summarize_df <- summarize_df %>% group_by(Transect, RouteNumber, Year, CountryNum, NumStops) %>% summarize(TA = sum(TA))
+ summarize_df <- summarize_df %>% group_by(Transect, RouteNumber, Year, CountryNum, NumStops) %>% summarize(TA = sum(TA))
 
 # Write to csv to save progress
-write.csv(summarize_df, "~/manuscript/derived data products/summarize_df_TO.csv")
+write.csv(summarize_df, "summarize_df_TF.csv")
 
+summarize_df <- read.csv("summarize_df_TF.csv")
 
 # -----------------------------------------------------------------------------------------------------------
 # -----------------------------#
@@ -300,9 +303,9 @@ write.csv(summarize_df, "~/manuscript/derived data products/summarize_df_TO.csv"
 # ----------------------------#
 
 # Create RouteNumber field, combining 'Route' and 'StateNum' fields
-Obs$Placeholder <- paste(obs$StateNum, obs$Route, sep=".")  # Create unique Placeholder ID for statenum + route
-r <- distinct(obs, StateNum, Route, .keep_all = TRUE) # Create another df to get a list of unique Route & StateNum's
-r <- r %>% select (StateNum, Route) # Select columns of interest
+Obs$Placeholder <- paste(Obs$StateNum, Obs$Route, sep=".")  # Create unique Placeholder ID for statenum + route
+r <- distinct(Obs, StateNum, Route, .keep_all = TRUE) # Create another df to get a list of unique Route & StateNum's
+r <- r %>% select (StateNum, Route, Placeholder) # Select columns of interest
 
 # Convert Route to a RouteNum that combines State/Province number and the individual Route within the state
 # i.e. Statenum = 04 and Route = 001 becomes RouteNumber = 4001
@@ -323,9 +326,8 @@ for(i in 1:nrows) {
   
 }
 
-r <- dplyr::select(r, -c(RouteDataID, StateNum, Route, RunType))
 Obs <- merge(Obs, r, by = "Placeholder", all.x = FALSE)
-Obs$Transect <- paste(obs$RouteNumber, obs$Year, sep=".")
+Obs$Transect <- paste(Obs$RouteNumber, Obs$Year, sep=".")
 
 
 
@@ -351,13 +353,13 @@ for( i in Obs_id ){
     }
     
   }
-  obs_list[[paste(i)]] <- o
+  Obs_list[[paste(i)]] <- o
 }
 
 
-Obs <- do.call("rbind", obs_list) # Rbind into a dataframe
+Obs <- do.call("rbind", Obs_list) # Rbind into a dataframe
 Obs_clean <- Obs %>% dplyr::select(c(Transect, ObsN, StartWind, RunType, FirstObs)) # Select out columns of interest
-Obs_clean <- Obs_clean[!duplicated(obs_clean$Transect), ]  # Remove duplicated transects - some had shared observers, I'll just go with 1
+Obs_clean <- Obs_clean[!duplicated(Obs_clean$Transect), ]  # Remove duplicated transects - some had shared observers, I'll just go with 1
 
 
 summarize_df$Transect <- paste(summarize_df$RouteNumber, summarize_df$Year, sep=".") # Re-make transect column of base dataset, sometimes it gets messed up
@@ -369,9 +371,24 @@ dddf <- dddf %>% filter(Year >= 2000) # Select years >= 2000
 # -----------------------------#
 #        FOREST COVER          | ------------------------------------------------------------------------------------------
 # ----------------------------#
+#forest <- read.csv("ForestCover.csv")
+
+#change <- forest %>% select(rte, change)
+#cover <- select(forest, -c(change))
+
+# reformat to long
+#forest_long <- reshape(cover, v.names="Forest cover", varying = 2:21, timevar="year", times=names(cover)[2:21],direction='long')
+#write.csv(forest_long, "ForestCoverLong.csv")
+
 forest <- read.csv("ForestCoverLong.csv")
-forest$Transect <- paste(forest$routes, forest$Year, sep=".") # Create transect id column
+
+forest$Transect <- paste(forest$rte, forest$year, sep=".")
+forest <- select(forest, -c(X, rte, year, id))
+
 ddddf <- merge(dddf, forest, by = "Transect", all.x = FALSE) # Merge forest data for each route into base dataset
 
 # Save final base dataset (repeat 4 times for richness-forest bird, richness-open bird, abundance-forest bird, abundance-open bird)
-write.csv(ddddf, "BaseDataset_RF.csv")
+write.csv(ddddf, "BaseDataset_TF.csv")
+
+
+

@@ -66,7 +66,7 @@ shade( ci.mean, pred_data)
 r <- data.frame(x, y)
 r$Region <- seq(1:30)
 
-d <- read.csv("~/manuscript/FinalDataset_RF.csv")
+d <- read.csv("~/space-for-time/FinalDataset_RF.csv")
 
 # Set up a column that contains info on how many spatial sites are associated with each temporal site
 spatial <- d %>% filter(space.time == 2)
@@ -180,7 +180,7 @@ shade( ci.mean2, pred_data)
 r <- data.frame(x, y)
 r$Region <- seq(1:30)
 
-d <- read.csv("~/manuscript/FinalDataset_RO.csv")
+d <- read.csv("~/space-for-time/FinalDataset_RO.csv")
 
 
 # Set up a column that contains info on how many spatial sites are associated with each temporal site
@@ -303,7 +303,7 @@ shade( ci.mean3, pred_data)
 r <- data.frame(x, y)
 r$Region <- seq(1:30)
 
-d <- read.csv("~/manuscript/FinalDataset_RF.csv")
+d <- read.csv("~/space-for-time/FinalDataset_RF.csv")
 
 
 # Set up a column that contains info on how many spatial sites are associated with each temporal site
@@ -428,7 +428,7 @@ shade( ci.mean4, pred_data)
 r <- data.frame(x, y)
 r$Region <- seq(1:30)
 
-d <- read.csv("~/manuscript/FinalDataset_RO.csv")
+d <- read.csv("~/space-for-time/FinalDataset_RO.csv")
 
 
 # Set up a column that contains info on how many spatial sites are associated with each temporal site
@@ -501,6 +501,6 @@ all <- ggarrange(p3,
 
 all
 
-ggsave(filename = "Richness_SpaceTimeCorrelationv_Final2.png", device = "png", plot = all,
+ggsave(filename = "Richness_SpaceTimeCorrelationv_Final3.png", device = "png", plot = all,
        width = 30, height = 30, units = "cm")
 

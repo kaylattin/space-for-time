@@ -8,9 +8,11 @@ library(bayesplot)
 rm(list = ls())
 gc()
 
-d <- read.csv("~/manuscript/FinalDataset_ROsub.csv")
+d <- read.csv("~/space-for-time/FinalDataset_RFsub.csv")
 
-d <- d %>% filter(!ref==2045)
+d <- d[!is.na(d$Richness),] # do only if using routes, not stops
+
+write.csv(d, "~/space-for-time/FinalDataset_RFsub.csv")
 
 # Initial data plotting ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 hist(d$Richness)
@@ -34,17 +36,18 @@ d$ObsN <- as.integer(as.factor(d$ObsN))
 d$Region <- as.integer(as.factor(d$ref)) # Create integer categorical for 'region' or space-time comparison
 
 x.seq = seq( from=min(d$Forest.cover), to = max(d$Forest.cover), length.out = 100 )
+
 d_slim <- list(
   ncounts = nrow(d),
   nreg = length(unique(d$Region)),
   nobs = length(unique(d$ObsN)),
   nst = 2,
-  nstops = length(unique(d$NumForestStops)),
-  stops = d$NumForestStops,
+  nstops = length(unique(d$NumStops)),
+  stops = d$NumStops,
   ndata = 100,
   
-  # ta = d$TA, # turn on if running abundance model
-  richness = d$Richness, # turn on if running richness model
+  ta = d$TA, # turn on if running abundance model
+  #richness = d$Richness, # turn on if running richness model
   spacetime = d$space.time,
   space = d$space,
   time = d$time,
@@ -59,7 +62,7 @@ d_slim <- list(
 
 # Compile the model in cmdstan  ~~~~~~~~~~~~~~~~~~~
 # file <- file.path ("AbundanceRegression.stan") # turn on if running abundance model
-file <- file.path("~/space-for-time/Rstan models/RichnessRegressionPoisson.stan") # turn on if running richness model
+file <- file.path("~/space-for-time/Rstan models/AbundanceRegressionPoisson.stan") # turn on if running richness model
 mod <- cmdstan_model(file, pedantic = TRUE)
 check_cmdstan_toolchain(fix = TRUE)
 
@@ -81,7 +84,7 @@ fit <- mod$sample(
 
 # create a stanfit S4 object 
 stanfit <- rstan::read_stan_csv(fit$output_files())
-save(stanfit, file =  "Output_TO_Final.RData")
+save(stanfit, file =  "Output_TOsub_Final.RData")
 
 y <- d$Richness
 y <- d$TA

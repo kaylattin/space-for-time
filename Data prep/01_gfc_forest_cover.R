@@ -7,17 +7,24 @@ library(sf)
 library(sp)
 library(raster)
 
+setwd("~/space-for-time/Shapefiles")
+
 # Load data in
-d <- readOGR("buffer_NA_dataset.shp") # dataset where bbs coords <= 1 km from line
+d <- st_read("buffer_NA_dataset.shp") # dataset where bbs coords <= 1 km from line
+d <- as(d, "Spatial")
+d <- d[!duplicated(d$rteno),] # do only if using routes, not stops
 
 ## OR, if doing stops:
-d <- readOGR("~/manuscript/Shapefiles/buffer_100m_dataset.shp") # dataset of stops buffered by 100m
+d <- st_read("buffer_100m_dataset.shp") # 
+d$RouteStop <- paste(d$rteno, d$New_Stop, sep = ".")
+d <- as(d, "Spatial")
+d <- d[!duplicated(d$RouteStop),] 
 
+# Project to the same CRS as forest data
 d_proj <- sp::spTransform(d, CRS("+proj=longlat +datum=WGS84 +no_defs"))
-# d_proj <- d_proj[!duplicated(d_proj$rteno),] # do only if using routes, not stops
 
-
-setwd("D:/gfcanalysis_v3")
+setwd("D:/final_gfcanalysis")
+rasterOptions(progress = 'window', timer = FALSE)
 
 # Determine which tiles in the GFC are needed to cover area of interest ~~~~~~~~~~~~~~~~~~~~~~~~~
 tiles <- calc_gfc_tiles(d)
@@ -27,7 +34,7 @@ plot(d) # Plot to check
 # Download the files
 download_tiles(
   tiles,
-  output_folder = "D:/gfcanalysis_v3",
+  output_folder = "D:/final_gfcanalysis",
   images = c("treecover2000", "lossyear", "gain", "datamask"),
   dataset = "GFC-2019-v1.7"
 )
@@ -35,13 +42,12 @@ download_tiles(
 #  Extract stack of 4 raster layers for the US & Canada ~~~~~~~~~~~~~~~~~~~~~~~~~
 forest <- extract_gfc(
   d,
-  data_folder = "D:/forestlayers_check",
+  data_folder = "D:/final_gfcanalysis",
   to_UTM = FALSE,
   stack = "change",
   dataset = "GFC-2019-v1.7"
 )
 writeRaster(forest, "gfc_analysis.tif", format= "GTiff", progress = "text", options = c("INTERLEAVE=BAND", "COMPRESS=LZW"))
-
 
 # Create a thresholded raster layer product, where 50% tree canopy = forested ~~~~~~~~~~~~~~~~~~~~~~~~~
 threshold_forest <- threshold_gfc(forest, forest_threshold = 50)
@@ -57,26 +63,23 @@ loss <- threshold_forest[[2]]
 gain <- threshold_forest[[3]]
 lossgain <- threshold_forest[[4]]
 
-# Save objects as separate Rasters
-writeRaster(cover, "threshold_cover2000.tif", format = "GTiff", options="COMPRESS=LZ77")
-writeRaster(loss, "threshold_loss.tif", format = "GTiff", options="COMPRESS=LZ77")
-writeRaster(gain, "threshold_gain.tif", format = "GTiff", options="COMPRESS=LZ77")
-
-
 ### ~~~~~~~~~~~~~~~~~~~~~~~~~ ### ANNUAL FOREST COVER FROM 2000 TO 2019 ### ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Extract pixel counts of cover2000
 exCover <- raster::extract(cover, d_proj, method = "simple")
-# save(exCover, file = "extract_cover.RData")
+save(exCover, file = "extract_100m_cover.RData")
 
 # Extract pixel counts of loss
 exLoss <- raster::extract(loss, d_proj, method = "simple")
-# save(exLoss, file = "extract_loss.RData")
+save(exLoss, file = "extract_100m_loss.RData")
 
-# Extract pixel counts of gain 
+# Extract pixel counts of gain
 exGain <- raster::extract(gain, d_proj, method = "simple")
-# save(exGain, file = "extract_gain.RData")
+save(exGain, file = "extract_100m_gain.RData")
 
+load("extract_100m_cover.RData")
+load("extract_100m_loss.RData")
+load("extract_100m_gain.RData")
 # Ceate a list of frequency tables for each route
 coverTab <- lapply(exCover, table)
 lossTab <- lapply(exLoss, table)
@@ -93,9 +96,10 @@ percentList <- vector("list")
 
 # Create a new loss dataframe for each route (in a more accessible format for the codes that follow)
 newLoss <- vector("list")
-routes <- d_proj@data$rteno
+routes <- paste(d_proj@data$rteno, d_proj@data$New_Stop, sep=".")
+rteno <- 38981
 
-for(i in 1:3558) {
+for(i in 1:rteno) {
   u <- data.frame(lossTab[[i]])
   
   if (length(u$Freq) >= 1) {
@@ -105,21 +109,28 @@ for(i in 1:3558) {
     u <- routes[i]
   }
   newLoss[[i]] <- u
+  
+  if(! i %% 100){
+    print(paste0("Progress: ", round((i/rteno)*100, 2), "% finished."))
+    flush.console()
+  }
 }
 
 # Bind dataframes into one dataframe
 newLoss <- do.call("rbind", newLoss)
 
+
 # Convert to wide format so that now every route has information on # pixels lost for every year - even if 0 
 # i.e., years aren't skipped in the matrix, data entered for 2000 to 2019 inclusive so all tables are n = 19
 newLoss_wide <- reshape(newLoss, direction = "wide", idvar = "rte", timevar = "Var1")
 newLoss_wide[is.na(newLoss_wide)]<-0 
+newLoss_wide <- newLoss_wide[, c(1, 2, 3, 8, 10, 16, 15, 18, 12, 4, 6, 13, 19, 11, 9, 20, 21, 14, 7, 17, 5)]
 
 
 # The code below sequentially tabulates the number and overall percentage of forested pixels in each of the 3558 routes
 # Starting with 2000, loss is subtracted to created a forest cover count for 2001; loss is subtracted again to create forest cover for 2002; and so on
 # In 2012, gained pixels (over the last 12 years) are added, and then loss is subtracted, and the calculation continues as before
-for(i in 1:3558) {
+for(i in 1:rteno) {
   
   coverMat <- matrix(coverTab[[i]])
   lossMat <- newLoss_wide[i,]
@@ -179,8 +190,16 @@ for(i in 1:3558) {
         forestMat[[i]] <- data.frame(rte, year, percent)
 
       }
- 
+  
+  if(! i %% 1000){
+    print(paste0("Progress: ", round(i/rteno*100, 2), "% finished."))
+    flush.console()
+    
   }
+ 
+}
+
+
   
 # Compile final master sheet
 final <- do.call("rbind", forestMat) 
@@ -194,31 +213,30 @@ write.xlsx(finalWide,"finalWide_check.xlsx")
 
 # Before running the code below, run the code above using the R object dStops in order to get forest cover estimates for each 100m buffer
 # Then, continue:
-for(n in 1:nrow(final))
-if(final$forest[n] >= 0.60){ # If forest cover in the stop is >= 60%, tag it as forested
+for(n in 1:nrow(final)){
+if(final$percent[n] >= 0.60){ # If forest cover in the stop is >= 60%, tag it as forested
   final$Forested[n] = 1
-}else if(final$forest[n] <= 0.40){ # else if forest cover <= 40%, tag is as open
+}else if(final$percent[n] <= 0.40){ # else if forest cover <= 40%, tag is as open
+  final$Forested[n] = 2
+}else{
   final$Forested[n] = 0
 }
-
-# Find forested stops
-stopsInForest<- vector("list") # Initailize list
-for( i in rtes ){
-  f <- final %>% filter(rteno == i)
-  stops_in_forest[i] <- f %>% filter(Forested == 1)
+  
+  if(! n %% 10000){
+    print(paste0("Progress: ", round(n/nrow(final)*100, 2), "% finished."))
+    flush.console()
+  }
 }
 
-stopsFinal <- do.call("rbind", stopsInForest)
-stopsFinal$stop <- paste("Stop", stopsFinal$stop, sep="")
-write.csv(stopsFinal, "stopsInForest.csv")
+stopsInForest <- final %>% filter(Forested == 1)
+stopsInOpen <- final %>% filter(Forested == 2)
 
-# Find open habitat stops
-stopsInOpen<- vector("list") # Initailize list
-for( i in rtes ){
-  f <- final %>% filter(rteno == i)
-  stopsInOpen[i] <- f %>% filter(Forested == 0)
-}
+stopsInForest$Stop <- gsub("^.*\\.", "", stopsInForest$rte)
+stopsInForest$rte <- sub("^(.*)[.].*", "\\1", stopsInForest$rte)
 
-stopsFinal <- do.call("rbind", stopsInOpen)
-stopsFinal$stop <- paste("Stop", stopsFinal$stop, sep="")
-write.csv(stopsFinal, "stopsInOpen.csv")
+stopsInOpen$Stop <- gsub("^.*\\.", "", stopsInOpen$rte)
+stopsInOpen$rte <- sub("^(.*)[.].*", "\\1", stopsInOpen$rte)
+
+setwd("~/space-for-time/Derived data products")
+write.csv(stopsInForest, "stopsInForest.csv")
+write.csv(stopsInOpen, "stopsInOpen.csv")

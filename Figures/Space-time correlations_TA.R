@@ -9,7 +9,7 @@ library(shinystan)
 
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ## RICHNESS - FOREST BIRDS - ALL ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-load("Output_TF_Poisson.RData")
+load("Output_TF_Final.RData")
 
 # Extract parameters for ggplot
 b_space <- summary(stanfit, pars = "b_space") # spatial slopes
@@ -63,9 +63,9 @@ shade( ci.mean, pred_data)
 #### GGPLOT ####
 ## Now move onto ggplot and just feed the intercept & slope in; compare to above (which is the correct way of doing it)
 r <- data.frame(x, y)
-r$Region <- seq(1:31)
+r$Region <- seq(1:30)
 
-d <- read.csv("~/manuscript/FinalDataset_TF.csv")
+d <- read.csv("~/space-for-time/FinalDataset_TF.csv")
 
 # Set up a column that contains info on how many spatial sites are associated with each temporal site
 spatial <- d %>% filter(space.time == 2)
@@ -123,7 +123,7 @@ p1
 
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ## RICHNESS - OPEN HABITATS BIRDS - ALL ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-load("Output_TO_Poisson.RData")
+load("Output_TO_Final.RData")
 # Extract parameters for ggplot
 b_space <- summary(stanfit, pars = "b_space") # spatial slopes
 b_time <- summary(stanfit, pars = "b_time") # temporal slopes
@@ -177,9 +177,9 @@ shade( ci.mean2, pred_data)
 #### GGPLOT ####
 ## Now move onto ggplot and just feed the intercept & slope in; compare to above (which is the correct way of doing it)
 r <- data.frame(x, y)
-r$Region <- seq(1:31)
+r$Region <- seq(1:30)
 
-d <- read.csv("~/manuscript/FinalDataset_TO.csv")
+d <- read.csv("~/space-for-time/FinalDataset_TO.csv")
 
 # Set up a column that contains info on how many spatial sites are associated with each temporal site
 spatial <- d %>% filter(space.time == 2)
@@ -245,7 +245,7 @@ p2
 
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ## RICHNESS - FOREST BIRDS - SUBSET ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-load("Output_TFsub_Poisson.RData")
+load("Output_TFsub_Final.RData")
 
 # Extract parameters for ggplot
 b_space <- summary(stanfit, pars = "b_space") # spatial slopes
@@ -299,9 +299,9 @@ shade( ci.mean3, pred_data)
 #### GGPLOT ####
 ## Now move onto ggplot and just feed the intercept & slope in; compare to above (which is the correct way of doing it)
 r <- data.frame(x, y)
-r$Region <- seq(1:31)
+r$Region <- seq(1:30)
 
-d <- read.csv("~/manuscript/FinalDataset_TF.csv")
+d <- read.csv("~/space-for-time/FinalDataset_TF.csv")
 
 # Set up a column that contains info on how many spatial sites are associated with each temporal site
 spatial <- d %>% filter(space.time == 2)
@@ -368,7 +368,7 @@ p3 <- p3 + theme(plot.margin = unit(c(1,1,1,1),"cm"),
 p3
 
 ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ ## RICHNESS - FOREST BIRDS - SUBSET ## ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-load("Output_TOsub_Poisson.RData")
+load("Output_TOsub_Final.RData")
 
 # Extract parameters for ggplot
 b_space <- summary(stanfit, pars = "b_space") # spatial slopes
@@ -423,9 +423,9 @@ shade( ci.mean4, pred_data)
 #### GGPLOT ####
 ## Now move onto ggplot and just feed the intercept & slope in; compare to above (which is the correct way of doing it)
 r <- data.frame(x, y)
-r$Region <- seq(1:31)
+r$Region <- seq(1:30)
 
-d <- read.csv("~/manuscript/FinalDataset_TO.csv")
+d <- read.csv("~/space-for-time/FinalDataset_TO.csv")
 
 # Set up a column that contains info on how many spatial sites are associated with each temporal site
 spatial <- d %>% filter(space.time == 2)
@@ -497,6 +497,6 @@ all <- ggarrange(p3,
 
 all
 
-ggsave(filename = "Abundance_SpaceTimeCorrelation.png", device = "png", plot = all,
+ggsave(filename = "Abundance_SpaceTimeCorrelation_Final3.png", device = "png", plot = all,
        width = 30, height = 30, units = "cm")
 
